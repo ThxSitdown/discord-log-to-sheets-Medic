@@ -117,19 +117,22 @@ SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/au
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
 sheet = None
 
+GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
+
 if GOOGLE_CREDENTIALS:
     try:
-        credentials_data = json.loads(GOOGLE_CREDENTIALS)
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(credentials_data, SCOPE)
+        logging.info(f"📜 GOOGLE_CREDENTIALS received: {GOOGLE_CREDENTIALS[:50]}...")  # แสดงข้อมูลบางส่วนเพื่อตรวจสอบ
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(GOOGLE_CREDENTIALS), SCOPE)
         client = gspread.authorize(creds)
         sheet = client.open("PoliceDuty").worksheet("Sheet1")
         logging.info("✅ Google Sheets setup completed.")
     except json.JSONDecodeError as e:
-        logging.error(f"❌ JSON Decode Error: {e}")
+        logging.error(f"❌ Invalid JSON format in GOOGLE_CREDENTIALS: {e}")
     except Exception as e:
         logging.error(f"❌ Error loading Google Sheets credentials: {e}")
 else:
     logging.warning("⚠️ GOOGLE_CREDENTIALS not found.")
+
 
 # ✅ ฟังก์ชันสำหรับรัน Discord Bot
 def run_discord_bot():
