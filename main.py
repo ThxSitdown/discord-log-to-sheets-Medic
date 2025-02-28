@@ -124,7 +124,7 @@ if GOOGLE_CREDENTIALS:
         logging.info(f"📜 GOOGLE_CREDENTIALS received: {GOOGLE_CREDENTIALS[:50]}...")  # แสดงข้อมูลบางส่วนเพื่อตรวจสอบ
         creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(GOOGLE_CREDENTIALS), SCOPE)
         client = gspread.authorize(creds)
-        sheet = client.open("PoliceDuty").worksheet("Sheet1")
+        sheet = client.open("MedicDuty").worksheet("Log")
         logging.info("✅ Google Sheets setup completed.")
     except json.JSONDecodeError as e:
         logging.error(f"❌ Invalid JSON format in GOOGLE_CREDENTIALS: {e}")
