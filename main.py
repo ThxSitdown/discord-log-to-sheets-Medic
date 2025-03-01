@@ -44,7 +44,7 @@ def run_flask():
 @bot.event
 async def on_ready():
     logging.info(f"🤖 {bot.user} is online and ready!")
-    await bot.change_presence(activity=discord.Game(name="Roblox"))
+    await bot.change_presence(activity=discord.Game(name="Minecraft"))
 
     if sheet:
         try:
