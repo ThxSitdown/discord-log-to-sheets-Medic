@@ -169,7 +169,7 @@ def keep_alive():
                 logging.warning(f"⚠️ Keep-alive failed (Status: {response.status_code})")
         except Exception as e:
             logging.error(f"❌ Keep-alive error: {e}")
-        time.sleep(40)
+        time.sleep(45)
 
 # Main
 if __name__ == "__main__":
