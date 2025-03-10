@@ -7,10 +7,14 @@ import logging
 import threading
 import requests
 import time
+import datetime
 from oauth2client.service_account import ServiceAccountCredentials
 from flask import Flask
 from discord.ext import commands
-import datetime
+from dotenv import load_dotenv  # ✅ โหลด environment variables
+
+# โหลด Environment Variables
+load_dotenv()
 
 # ตั้งค่า Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -21,7 +25,7 @@ intents.message_content = True
 intents.members = True
 intents.presences = True
 
-bot = commands.Bot(command_prefix="!", intents=intents)  # ✅ ใช้ Bot แทน Client
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ตั้งค่า Flask App
 app = Flask(__name__)
@@ -54,9 +58,9 @@ async def on_ready():
             logging.error(f"❌ ไม่สามารถเชื่อมต่อ Google Sheets: {e}")
 
 # ✅ รับข้อมูลเฉพาะจากห้องที่มี ID 
-TARGET_CHANNEL_ID = 1341317473164726272  
+TARGET_CHANNEL_ID = int(os.getenv("TARGET_CHANNEL_ID", 1341317473164726272))
 
-# ฟังก์ชันสำหรับแปลงเวลาเป็นรูปแบบ DD/MM/YYYY HH:MM:SS
+# ฟังก์ชันแปลงเวลา
 def format_datetime(raw_time):
     pattern = r"(\d{1,2})/(\d{1,2})/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})"
     match = re.search(pattern, raw_time)
@@ -68,13 +72,14 @@ def format_datetime(raw_time):
         return formatted_time
     else:
         logging.warning(f"⚠️ รูปแบบเวลาไม่ถูกต้อง: {raw_time}")
-        return raw_time  # ถ้าข้อมูลไม่ตรงกับรูปแบบ ให้คืนค่าตามที่ได้รับมา
+        return raw_time
 
 # ✅ ฟังก์ชันหาบรรทัดสุดท้ายของ Google Sheets
 def get_last_row():
-    values = sheet.col_values(1)  # ✅ ดึงเฉพาะข้อมูลจากคอลัมน์ A
-    last_row = len(values) + 1  # คำนวณแถวถัดไป
-    return last_row
+    if sheet:
+        values = sheet.col_values(1)
+        return len(values) + 1
+    return None
 
 @bot.event
 async def on_message(message):
@@ -82,50 +87,53 @@ async def on_message(message):
         return
 
     if message.author.bot and message.author.name == "Captain Hook":
-        content = message.content.strip()
-        name, steam_id, check_in_time, check_out_time = None, None, None, None
+        try:
+            content = message.content.strip()
+            name, steam_id, check_in_time, check_out_time = None, None, None, None
 
-        # ✅ ดึงข้อมูลจาก Embed
-        if message.embeds:
-            for embed in message.embeds:
-                for field in embed.fields:
-                    if "ชื่อ" in field.name:
-                        name = field.value.strip("`").strip()
-                    elif "ไอดี" in field.name:
-                        steam_id = field.value.strip().replace("steam:", "")
-                    elif "เข้างาน" in field.name:
-                        check_in_time = format_datetime(field.value.strip())
-                    elif "ออกงาน" in field.name:
-                        check_out_time = format_datetime(field.value.strip())
+            # ✅ ดึงข้อมูลจาก Embed
+            if message.embeds:
+                for embed in message.embeds:
+                    for field in embed.fields:
+                        if "ชื่อ" in field.name:
+                            name = field.value.strip("`").strip()
+                        elif "ไอดี" in field.name:
+                            steam_id = field.value.strip().replace("steam:", "")
+                        elif "เข้างาน" in field.name:
+                            check_in_time = format_datetime(field.value.strip())
+                        elif "ออกงาน" in field.name:
+                            check_out_time = format_datetime(field.value.strip())
 
-        # ✅ หากดึงข้อมูลจาก Embed ไม่ได้ ลองใช้ Regex
-        if not all([name, steam_id, check_in_time, check_out_time]):
-            pattern = r"ชื่อ\s*(.+?)\s*ไอดี\s*steam:(\S+)\s*เวลาเข้างาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)\s*เวลาออกงาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)"
-            match = re.search(pattern, content, re.DOTALL | re.MULTILINE | re.IGNORECASE)
+            # ✅ ใช้ Regex หากดึงจาก Embed ไม่ได้
+            if not all([name, steam_id, check_in_time, check_out_time]):
+                pattern = r"ชื่อ\s*(.+?)\s*ไอดี\s*steam:(\S+)\s*เวลาเข้างาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)\s*เวลาออกงาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)"
+                match = re.search(pattern, content, re.DOTALL | re.MULTILINE | re.IGNORECASE)
 
-            if match:
-                name = match.group(1).strip("`").strip()
-                steam_id = match.group(2).strip()
-                check_in_time = format_datetime(match.group(3).strip())
-                check_out_time = format_datetime(match.group(4).strip())
+                if match:
+                    name = match.group(1).strip("`").strip()
+                    steam_id = match.group(2).strip()
+                    check_in_time = format_datetime(match.group(3).strip())
+                    check_out_time = format_datetime(match.group(4).strip())
 
-        # ✅ ตรวจสอบว่าข้อมูลครบถ้วนก่อนบันทึก
-        if all([name, steam_id, check_in_time, check_out_time]):
-            logging.info(f"📌 บันทึกข้อมูล: {name}, {steam_id}, {check_in_time}, {check_out_time}")
+            if all([name, steam_id, check_in_time, check_out_time]):
+                logging.info(f"📌 บันทึกข้อมูล: {name}, {steam_id}, {check_in_time}, {check_out_time}")
 
-            if sheet:
-                try:
-                    last_row = get_last_row()
-                    sheet.update(f"A{last_row}:D{last_row}", [[name, steam_id, check_in_time, check_out_time]])
-                    logging.info("✅ ข้อมูลถูกบันทึกลง Google Sheets สำเร็จ")
-                except Exception as e:
-                    logging.error(f"❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล Google Sheets: {e}")
-        else:
-            logging.warning("⚠️ ข้อมูลไม่ครบถ้วน ไม่สามารถบันทึกได้!")
+                if sheet:
+                    try:
+                        last_row = get_last_row()
+                        if last_row:
+                            sheet.update(f"A{last_row}:D{last_row}", [[name, steam_id, check_in_time, check_out_time]])
+                            logging.info("✅ ข้อมูลถูกบันทึกลง Google Sheets สำเร็จ")
+                    except Exception as e:
+                        logging.error(f"❌ Google Sheets error: {e}")
+            else:
+                logging.warning("⚠️ ข้อมูลไม่ครบถ้วน ไม่สามารถบันทึกได้!")
+        except Exception as e:
+            logging.error(f"❌ Error processing message: {e}")
 
     await bot.process_commands(message)
 
-# ตั้งค่า Google Sheets
+# ✅ ตั้งค่า Google Sheets
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
 sheet = None
@@ -137,32 +145,32 @@ if GOOGLE_CREDENTIALS:
         sheet = client.open("MedicDuty").worksheet("Log")
         logging.info("✅ Google Sheets setup completed.")
     except Exception as e:
-        logging.error(f"❌ Error loading Google Sheets credentials: {e}")
+        logging.error(f"❌ Google Sheets error: {e}")
 else:
     logging.warning("⚠️ GOOGLE_CREDENTIALS not found.")
 
-# ฟังก์ชันสำหรับรัน Discord Bot
+# ✅ ฟังก์ชันรัน Discord Bot
 def run_discord_bot():
     DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
     if not DISCORD_BOT_TOKEN:
-        logging.error("❌ DISCORD_BOT_TOKEN not found. Bot will not start.")
+        logging.error("❌ DISCORD_BOT_TOKEN not found.")
         return
     
     try:
         logging.info("🚀 Starting Discord Bot...")
         bot.run(DISCORD_BOT_TOKEN)
     except discord.errors.LoginFailure:
-        logging.error("❌ Invalid Discord Bot Token! กรุณาตรวจสอบโทเค็นของคุณ.")
+        logging.error("❌ Invalid Discord Bot Token!")
     except Exception as e:
-        logging.error(f"❌ Discord bot encountered an error: {e}")
+        logging.error(f"❌ Discord bot error: {e}")
 
-# ฟังก์ชัน Keep-Alive
+# ✅ Keep-Alive
 KEEP_ALIVE_URL = "https://discord-log-to-sheets-medic.onrender.com/health"
 
 def keep_alive():
     while True:
         try:
-            response = requests.get(KEEP_ALIVE_URL)
+            response = requests.get(KEEP_ALIVE_URL, timeout=5)
             if response.status_code == 200:
                 logging.info("✅ Keep-alive successful.")
             else:
@@ -171,7 +179,7 @@ def keep_alive():
             logging.error(f"❌ Keep-alive error: {e}")
         time.sleep(45)
 
-# Main
+# ✅ Main
 if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
     threading.Thread(target=keep_alive, daemon=True).start()
