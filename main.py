@@ -54,7 +54,7 @@ async def on_ready():
             logging.error(f"❌ ไม่สามารถเชื่อมต่อ Google Sheets: {e}")
 
 # ✅ รับข้อมูลเฉพาะจากห้องที่มี ID = 1341317415367082006 เท่านั้น
-TARGET_CHANNEL_ID = 1341317415367082006  
+TARGET_CHANNEL_ID = 1341317473164726272  
 
 # ฟังก์ชันสำหรับแปลงเวลาเป็นรูปแบบ DD/MM/YYYY HH:MM:SS
 def format_datetime(raw_time):
