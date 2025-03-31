@@ -157,22 +157,22 @@ def run_discord_bot():
         logging.error(f"❌ Discord bot encountered an error: {e}")
 
 # ฟังก์ชัน Keep-Alive
-KEEP_ALIVE_URL = "https://discord-log-to-sheets-medic-6d8j.onrender.com/health"
+#KEEP_ALIVE_URL = "https://discord-log-to-sheets-medic-6d8j.onrender.com/health"
 
-def keep_alive():
-    while True:
-        try:
-            response = requests.get(KEEP_ALIVE_URL)
-            if response.status_code == 200:
-                logging.info("✅ Keep-alive successful.")
-            else:
-                logging.warning(f"⚠️ Keep-alive failed (Status: {response.status_code})")
-        except Exception as e:
-            logging.error(f"❌ Keep-alive error: {e}")
-        time.sleep(40)
+#def keep_alive():
+#    while True:
+#        try:
+#            response = requests.get(KEEP_ALIVE_URL)
+#            if response.status_code == 200:
+#                logging.info("✅ Keep-alive successful.")
+#            else:
+#                logging.warning(f"⚠️ Keep-alive failed (Status: {response.status_code})")
+#        except Exception as e:
+#            logging.error(f"❌ Keep-alive error: {e}")
+#        time.sleep(40)
 
 # Main
 if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
-    threading.Thread(target=keep_alive, daemon=True).start()
+   # threading.Thread(target=keep_alive, daemon=True).start()
     run_discord_bot()
