@@ -73,14 +73,9 @@ def format_datetime(raw_time):
 # ✅ ฟังก์ชันหาบรรทัดสุดท้ายของ Google Sheets
 def get_last_row():
     values = sheet.col_values(1)  # ✅ ดึงข้อมูลจากคอลัมน์ A
-    last_row = len(values) + 1  # คำนวณแถวถัดไป
-    
-    # ป้องกันการเขียนเกิน 1000 แถว
-    if last_row > 1000:
-        logging.error("❌ Google Sheets เต็ม! ไม่สามารถบันทึกข้อมูลเพิ่มได้.")
-        return None  # หยุดการเขียนข้อมูล
-    
-    return last_row
+    if not values:
+        return 2  # ถ้าไม่มีข้อมูลเลย ให้เริ่มที่แถว 2
+    return len(values) + 1
 
 @bot.event
 async def on_message(message):
@@ -122,7 +117,10 @@ async def on_message(message):
             if sheet:
                 try:
                     last_row = get_last_row()
-                    sheet.update(f"A{last_row}:D{last_row}", [[name, steam_id, check_in_time, check_out_time]])
+                    range_name = f"A{last_row}:D{last_row}"
+                    values = [[name, steam_id, check_in_time, check_out_time]]
+                    sheet.update(range_name=range_name, values=values)
+
                     logging.info("✅ ข้อมูลถูกบันทึกลง Google Sheets สำเร็จ")
                 except Exception as e:
                     logging.error(f"❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล Google Sheets: {e}")
