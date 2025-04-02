@@ -72,9 +72,22 @@ def format_datetime(raw_time):
 
 # ✅ ฟังก์ชันหาบรรทัดสุดท้ายของ Google Sheets
 def get_last_row():
-    values = sheet.col_values(1)  # ✅ ดึงเฉพาะข้อมูลจากคอลัมน์ A
+    values = sheet.col_values(1)  # ✅ ดึงข้อมูลจากคอลัมน์ A
     last_row = len(values) + 1  # คำนวณแถวถัดไป
+    
+    # ป้องกันการเขียนเกิน 1000 แถว
+    if last_row > 1000:
+        logging.error("❌ Google Sheets เต็ม! ไม่สามารถบันทึกข้อมูลเพิ่มได้.")
+        return None  # หยุดการเขียนข้อมูล
+    
     return last_row
+
+def clear_oldest_row():
+    values = sheet.col_values(1)
+    if len(values) >= 1000:
+        logging.info("♻️ ลบแถวที่ 2 (แถวแรกสุดที่เป็นข้อมูล) เพื่อเพิ่มพื้นที่")
+        sheet.delete_rows(2)
+
 
 @bot.event
 async def on_message(message):
