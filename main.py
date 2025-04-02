@@ -82,13 +82,6 @@ def get_last_row():
     
     return last_row
 
-def clear_oldest_row():
-    values = sheet.col_values(1)
-    if len(values) >= 1000:
-        logging.info("♻️ ลบแถวที่ 2 (แถวแรกสุดที่เป็นข้อมูล) เพื่อเพิ่มพื้นที่")
-        sheet.delete_rows(2)
-
-
 @bot.event
 async def on_message(message):
     if message.channel.id != TARGET_CHANNEL_ID:
